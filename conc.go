@@ -21,16 +21,35 @@ var message = []string{
 	"And then there's ten!",
 }
 
+var n int
+
 func main() {
-	var n int
+	userInput()
+	msgBuff := messageOutput(n)
+
+	var wait sync.WaitGroup
+	wait.Add(n)
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wait.Done()
+			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
+			fmt.Println(<-msgBuff)
+		}()
+	}
+	wait.Wait()
+}
+
+func userInput() {
 	fmt.Print("How many messages do you want? Pick a number between 1 and 10: ")
 	fmt.Scan(&n)
 
 	if n > 10 || n < 1 {
-		fmt.Println("Number is not between 1 and 10, start again.")
-		return
+		err := fmt.Errorf("Number is not between 1 and 10, start again.")
+		panic(err)
 	}
+}
 
+func messageOutput(n int) <-chan string {
 	// buffered channel that will keep the messages in random order
 	channel := make(chan string, n)
 	for i := 0; i < n; i++ {
@@ -40,17 +59,6 @@ func main() {
 		message = slices.Delete(message, a, a+1)
 	}
 	close(channel)
+	return channel
 
-	var wait sync.WaitGroup
-	wait.Add(n)
-
-	for i := 0; i < n; i++ {
-		go func() {
-			defer wait.Done()
-			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
-			fmt.Println(<-channel)
-		}()
-	}
-
-	wait.Wait()
 }
